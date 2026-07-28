@@ -4,6 +4,7 @@ import { Camera } from "./camera/Camera";
 import { WORKSHOP_CONFIG } from "./constants/workshop";
 import { InputManager } from "./input/InputManager";
 import { Player } from "./entities/player/Player";
+import { InteractionSystem } from "./interaction/InteractionSystem";
 import { WorkshopScene } from "./scenes/WorkshopScene";
 
 export class Game {
@@ -11,6 +12,7 @@ export class Game {
   private readonly worldContainer = new Container();
 
   private input: InputManager | null = null;
+  private interactionSystem: InteractionSystem | null = null;
   private player: Player | null = null;
   private camera: Camera | null = null;
   private currentScene: WorkshopScene | null = null;
@@ -35,6 +37,7 @@ export class Game {
     container.appendChild(this.app.canvas);
 
     this.input = new InputManager();
+    this.interactionSystem = new InteractionSystem();
     this.camera = this.createCamera();
     this.app.stage.addChild(this.worldContainer);
 
@@ -119,24 +122,14 @@ export class Game {
     this.camera?.update();
     this.camera?.applyTo(this.worldContainer);
 
-    this.handleInteractions();
+    this.interactionSystem?.update({
+      playerPosition: this.getPlayerInteractionPosition(),
+      input: this.input,
+      interactables: this.currentScene?.getInteractables() ?? [],
+    });
 
     this.input.update();
   };
-
-  private handleInteractions() {
-    if (!this.input) {
-      return;
-    }
-
-    if (this.input.wasPressed("w")) {
-      console.log("W 상호작용");
-    }
-
-    if (this.input.wasPressed("e")) {
-      console.log("E 상호작용");
-    }
-  }
 
   private handleResize = () => {
     requestAnimationFrame(() => {
@@ -165,6 +158,10 @@ export class Game {
       x: this.player.x,
       y: this.player.y - this.player.getDisplayHeight() * 0.45,
     };
+  }
+
+  private getPlayerInteractionPosition() {
+    return this.player?.getInteractionOrigin() ?? { x: 0, y: 0 };
   }
 
   private createCamera() {
@@ -198,6 +195,7 @@ export class Game {
 
     this.input?.destroy();
     this.input = null;
+    this.interactionSystem = null;
 
     if (!this.initialized) {
       return;

@@ -22,4 +22,9 @@ export const WORKSHOP_CONFIG = {
       displayHeightRatio: 0.18,
     },
   },
+  interaction: {
+    doorDistance: 260,
+    noticeDistance: 220,
+    deskDistance: 260,
+  },
 } as const;

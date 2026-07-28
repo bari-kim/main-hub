@@ -6,6 +6,7 @@ import {
   TilingSprite,
 } from "pixi.js";
 import { WORKSHOP_CONFIG } from "../constants/workshop";
+import type { Interactable } from "../interaction/Interactable";
 
 type WorkshopObjectKey = "door" | "desk" | "notice";
 
@@ -46,6 +47,51 @@ export class WorkshopScene extends Container {
 
   public getFloorY(viewportHeight: number) {
     return viewportHeight - WORKSHOP_CONFIG.floor.height;
+  }
+
+  public getInteractables(): Interactable[] {
+    const interactables: Interactable[] = [];
+
+    const door = this.objects.get("door");
+    if (door) {
+      interactables.push({
+        id: "door",
+        interactionPosition: this.getObjectInteractionPosition(door),
+        interactionDistance: WORKSHOP_CONFIG.interaction.doorDistance,
+        interactionKeys: ["w", "e"],
+        interact: () => {
+          console.log("문과 상호작용");
+        },
+      });
+    }
+
+    const notice = this.objects.get("notice");
+    if (notice) {
+      interactables.push({
+        id: "notice",
+        interactionPosition: this.getObjectInteractionPosition(notice),
+        interactionDistance: WORKSHOP_CONFIG.interaction.noticeDistance,
+        interactionKeys: ["e"],
+        interact: () => {
+          console.log("게시판과 상호작용");
+        },
+      });
+    }
+
+    const desk = this.objects.get("desk");
+    if (desk) {
+      interactables.push({
+        id: "desk",
+        interactionPosition: this.getObjectInteractionPosition(desk),
+        interactionDistance: WORKSHOP_CONFIG.interaction.deskDistance,
+        interactionKeys: ["e"],
+        interact: () => {
+          console.log("책상과 상호작용");
+        },
+      });
+    }
+
+    return interactables;
   }
 
   private createWall() {
@@ -147,5 +193,12 @@ export class WorkshopScene extends Container {
 
   private getWallHeight(viewportHeight: number) {
     return Math.max(0, viewportHeight - WORKSHOP_CONFIG.floor.height);
+  }
+
+  private getObjectInteractionPosition(object: Sprite) {
+    return {
+      x: object.x,
+      y: object.y,
+    };
   }
 }
