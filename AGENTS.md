@@ -1,5 +1,31 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# AGENTS.md — Bari's Room
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+이 저장소에서 작업하는 모든 코딩 에이전트는 수정 전에 아래 문서를 순서대로 읽는다.
+
+1. `docs/DevGuide.md`
+2. `docs/Decisions.md`
+3. `docs/Roadmap.md`
+4. 프로젝트 원본 기획 문서 `Bari’s Room*.md`
+
+## 작업 원칙
+
+- 요청받은 파일만 보지 말고 관련 구조를 먼저 확인한다.
+- 변경 전 현재 구조와 영향 범위를 짧게 설명한다.
+- 최소 변경으로 구현하되, 임시 코드가 이후 픽셀 스프라이트 교체를 방해하지 않게 한다.
+- 렌더링 크기, 충돌 영역, 월드 좌표, 카메라 좌표를 분리한다.
+- 반응형 변경 후 이동·충돌·상호작용·카메라를 함께 점검한다.
+- 작업 후 가능한 범위에서 lint, typecheck, build 또는 실행 검증을 수행한다.
+- 기획 문서와 코드가 충돌하면 `docs/Decisions.md`의 최신 결정이 우선한다.
+- 중요한 새 결정은 `docs/Decisions.md`에 날짜와 이유를 추가한다.
+- 완료한 항목은 `docs/Roadmap.md`에 반영한다.
+
+## 현재 최우선 작업
+
+임시 플레이어의 화면상 높이를 viewport 높이의 약 40%로 조정한다.
+
+단, 다음을 반드시 지킨다.
+
+- 보이는 캐릭터 크기와 충돌 박스를 동일하게 취급하지 않는다.
+- 충돌 영역은 캐릭터 발 주변을 기준으로 별도 관리한다.
+- 브라우저 리사이즈 후에도 목표 비율과 좌표가 안정적으로 유지되어야 한다.
+- 실제 픽셀 스프라이트로 교체할 때 게임 로직을 다시 작성하지 않아도 되는 구조로 만든다.
