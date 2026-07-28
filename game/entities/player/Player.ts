@@ -3,7 +3,6 @@ import {
   PLAYER_HITBOX,
   PLAYER_SPEED,
 } from "../../../assets/characters/config";
-import playerWalkRightTemp from "../../../assets/characters/player/walk_right_temp.png";
 import type { InputManager } from "../../input/InputManager";
 
 export const PLAYER_VIEWPORT_HEIGHT_RATIO = 0.4;
@@ -19,8 +18,6 @@ type Bounds = {
   width: number;
   height: number;
 };
-
-type ImportedImage = string | { src: string };
 
 export class Player extends Container {
   private readonly visualRoot = new Container();
@@ -38,10 +35,8 @@ export class Player extends Container {
   }
 
   public static async create() {
-    const imageSource = Player.getImageSource(playerWalkRightTemp);
-
     try {
-      const texture = await Assets.load<Texture | undefined>(imageSource);
+      const texture = Assets.get<Texture | undefined>("playerWalkRight");
 
       if (!texture) {
         return new Player(null);
@@ -84,10 +79,6 @@ export class Player extends Container {
     character.fill("#f2c4c4");
 
     return character;
-  }
-
-  private static getImageSource(image: ImportedImage) {
-    return typeof image === "string" ? image : image.src;
   }
 
   public resizeForViewport(viewportHeight: number) {

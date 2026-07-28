@@ -112,3 +112,18 @@
 - [ ] 공간 성장
 - [ ] 숨겨진 요소
 - [ ] 데이터 저장 및 관리자 페이지
+
+## Asset Loading
+
+- [x] Move runtime game asset paths to `public/game-assets`
+- [x] Add PixiJS Assets manifest and bundle loader
+- [x] Split workshop and player bundles
+- [x] Remove direct image imports from `Game.ts` and `Player.ts`
+- [x] Keep nearest-neighbor texture scale mode after bundle load
+
+## Scene Structure
+
+- [x] Move workshop layout constants to `WORKSHOP_CONFIG`
+- [x] Move wall, floor, door, notice, and desk creation to `WorkshopScene`
+- [x] Replace individual workshop Sprite fields in `Game.ts` with a scene-owned object collection
+- [x] Keep `Game.ts` focused on app, input, player, camera, and current scene
