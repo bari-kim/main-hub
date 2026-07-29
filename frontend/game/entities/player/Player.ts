@@ -2,7 +2,7 @@ import { Assets, Container, Graphics, Sprite, Texture } from "pixi.js";
 import {
   PLAYER_HITBOX,
   PLAYER_SPEED,
-} from "../../../assets/characters/config";
+} from "./config";
 import type { InputManager } from "../../input/InputManager";
 
 export const PLAYER_VIEWPORT_HEIGHT_RATIO = 0.4;

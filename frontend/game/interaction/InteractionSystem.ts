@@ -7,6 +7,10 @@ type InteractionSystemUpdateArgs = {
   interactables: Interactable[];
 };
 
+type InteractionResult = {
+  interactedIds: string[];
+};
+
 export class InteractionSystem {
   public update({
     playerPosition,
@@ -14,10 +18,18 @@ export class InteractionSystem {
     interactables,
   }: InteractionSystemUpdateArgs) {
     const pressedKeys = new Set<string>();
+    const interactedIds: string[] = [];
 
     for (const interactable of interactables) {
       for (const key of interactable.interactionKeys) {
         const normalizedKey = key.toLowerCase();
+
+        if (normalizedKey === "mouseleft") {
+          if (input.wasMousePressed("left")) {
+            pressedKeys.add(normalizedKey);
+          }
+          continue;
+        }
 
         if (input.wasPressed(normalizedKey)) {
           pressedKeys.add(normalizedKey);
@@ -32,8 +44,13 @@ export class InteractionSystem {
         key,
       );
 
-      closestInteractable?.interact();
+      if (closestInteractable) {
+        closestInteractable.interact();
+        interactedIds.push(closestInteractable.id);
+      }
     }
+
+    return { interactedIds } satisfies InteractionResult;
   }
 
   private findClosestInteractable(

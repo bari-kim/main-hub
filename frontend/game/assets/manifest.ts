@@ -7,15 +7,19 @@ export const assetsManifest: AssetsManifest = {
       assets: [
         {
           alias: "floor",
-          src: "/game-assets/tiles/floor_temp.png",
+          src: "/game-assets/tiles/floor.png",
         },
         {
           alias: "wall",
-          src: "/game-assets/tiles/wall_temp.png",
+          src: "/game-assets/tiles/wall.png",
         },
         {
           alias: "door",
-          src: "/game-assets/objects/door_temp.png",
+          src: "/game-assets/objects/door.png",
+        },
+        {
+          alias: "doorOpen",
+          src: "/game-assets/objects/door_open.png",
         },
         {
           alias: "notice",

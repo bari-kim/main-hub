@@ -15,7 +15,7 @@ export async function loadWorkshopAssets() {
   await initializeAssets();
 
   workshopLoadPromise ??= Assets.loadBundle("workshop").then(() => {
-    applyNearestScaleMode(["floor", "wall", "door", "notice", "desk"]);
+    applyNearestScaleMode(["floor", "wall", "door", "doorOpen", "notice", "desk"]);
   });
 
   await workshopLoadPromise;

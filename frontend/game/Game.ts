@@ -121,10 +121,18 @@ export class Game {
     this.camera?.update();
     this.camera?.applyTo(this.worldContainer);
 
-    this.interactionSystem?.update({
+    const interactionResult = this.interactionSystem?.update({
       playerPosition: this.getPlayerInteractionPosition(),
       input: this.input,
       interactables: this.currentScene?.getInteractables() ?? [],
+    });
+
+    const pointerWorldPosition = this.getPointerWorldPosition();
+
+    this.currentScene?.updateDoorState({
+      hoveredDoor: this.currentScene?.isDoorHovered(pointerWorldPosition) ?? false,
+      interactedDoor: interactionResult?.interactedIds.includes("door") ?? false,
+      now: performance.now(),
     });
 
     this.input.update();
@@ -162,6 +170,16 @@ export class Game {
 
   private getPlayerInteractionPosition() {
     return this.player?.getInteractionOrigin() ?? { x: 0, y: 0 };
+  }
+
+  private getPointerWorldPosition() {
+    const pointer = this.input?.getMousePosition() ?? { x: 0, y: 0 };
+    const cameraPosition = this.camera?.getPosition() ?? { x: 0, y: 0 };
+
+    return {
+      x: pointer.x + cameraPosition.x,
+      y: pointer.y + cameraPosition.y,
+    };
   }
 
   private createCamera() {

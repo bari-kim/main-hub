@@ -4,7 +4,7 @@ export const WORKSHOP_CONFIG = {
   },
   floor: {
     height: 120,
-    tileScale: 0.35,
+    tileScale: 4,
   },
   player: {
     startX: 360,

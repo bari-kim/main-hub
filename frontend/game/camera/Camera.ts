@@ -48,6 +48,10 @@ export class Camera {
     container.position.set(-this.position.x, -this.position.y);
   }
 
+  public getPosition() {
+    return { ...this.position };
+  }
+
   private clamp(position: Point): Point {
     return {
       x: this.clampAxis(position.x, this.world.width, this.viewport.width),
