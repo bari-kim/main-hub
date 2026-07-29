@@ -11,6 +11,10 @@ export class InputManager {
   private handleKeyDown = (event: KeyboardEvent) => {
     const key = event.key.toLowerCase();
 
+    if (key === " " || key === "spacebar") {
+      event.preventDefault();
+    }
+
     if (!this.pressedKeys.has(key)) {
       this.justPressedKeys.add(key);
     }

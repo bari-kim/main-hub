@@ -9,6 +9,10 @@ export const PLAYER_VIEWPORT_HEIGHT_RATIO = 0.4;
 
 const PLAYER_VISUAL_WIDTH = 439;
 const PLAYER_VISUAL_HEIGHT = 734;
+const PLAYER_JUMP_GRAVITY = 2400;
+const PLAYER_JUMP_APEX_RATIO = 0.5;
+const PLAYER_GROUND_EPSILON = 0.5;
+const PLAYER_AIR_CONTROL_MULTIPLIER = 1;
 
 type PlayerDirection = "left" | "right";
 
@@ -25,6 +29,8 @@ export class Player extends Container {
   private visualScale = 1;
 
   private direction: PlayerDirection = "right";
+  private groundY = 0;
+  private verticalVelocity = 0;
 
   private constructor(texture: Texture | null) {
     super();
@@ -99,9 +105,13 @@ export class Player extends Container {
     deltaTime: number,
     input: InputManager,
     worldWidth: number,
+    groundY: number,
   ) {
-    const movementDistance = PLAYER_SPEED * (deltaTime / 60);
+    const deltaSeconds = deltaTime / 60;
     const previousX = this.x;
+    const movementDistance = this.getHorizontalMovementDistance(deltaSeconds);
+
+    this.groundY = groundY;
 
     if (input.isPressed("a", "arrowleft")) {
       this.x -= movementDistance;
@@ -111,6 +121,18 @@ export class Player extends Container {
     if (input.isPressed("d", "arrowright")) {
       this.x += movementDistance;
       this.setDirection("right");
+    }
+
+    if (input.wasPressed("space") && this.isGrounded()) {
+      this.verticalVelocity = -this.getJumpVelocity();
+    }
+
+    this.verticalVelocity += PLAYER_JUMP_GRAVITY * deltaSeconds;
+    this.y += this.verticalVelocity * deltaSeconds;
+
+    if (this.y >= this.groundY) {
+      this.y = this.groundY;
+      this.verticalVelocity = 0;
     }
 
     this.keepVisualInsideWorld(worldWidth);
@@ -143,6 +165,15 @@ export class Player extends Container {
     const maximumX = worldWidth - visualBounds.width - visualBounds.x;
 
     this.x = Math.max(minimumX, Math.min(this.x, maximumX));
+  }
+
+  public setGroundY(groundY: number) {
+    this.groundY = groundY;
+
+    if (this.isGrounded()) {
+      this.y = groundY;
+      this.verticalVelocity = 0;
+    }
   }
 
   public getDisplayWidth() {
@@ -185,5 +216,24 @@ export class Player extends Container {
 
   public getDirection() {
     return this.direction;
+  }
+
+  private isGrounded() {
+    return Math.abs(this.y - this.groundY) <= PLAYER_GROUND_EPSILON;
+  }
+
+  private getJumpVelocity() {
+    const targetJumpHeight =
+      this.getDisplayHeight() * PLAYER_JUMP_APEX_RATIO;
+
+    return Math.sqrt(2 * PLAYER_JUMP_GRAVITY * targetJumpHeight);
+  }
+
+  private getHorizontalMovementDistance(deltaSeconds: number) {
+    const airControlMultiplier = this.isGrounded()
+      ? 1
+      : PLAYER_AIR_CONTROL_MULTIPLIER;
+
+    return PLAYER_SPEED * deltaSeconds * airControlMultiplier;
   }
 }

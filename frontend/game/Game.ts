@@ -1,4 +1,4 @@
-import { Application, Container } from "pixi.js";
+﻿import { Application, Container } from "pixi.js";
 import { loadPlayerAssets, loadWorkshopAssets } from "./assets/loadAssets";
 import { Camera } from "./camera/Camera";
 import { WORKSHOP_CONFIG } from "./constants/workshop";
@@ -95,9 +95,7 @@ export class Game {
       return;
     }
 
-    this.player.y =
-      this.currentScene?.getFloorY(this.app.screen.height) ??
-      this.app.screen.height - WORKSHOP_CONFIG.floor.height;
+    this.player.y = this.getGroundY();
   }
 
   private startGameLoop() {
@@ -113,6 +111,7 @@ export class Game {
       this.app.ticker.deltaTime,
       this.input,
       this.getWorldSize().width,
+      this.getGroundY(),
     );
 
     if (didMove) {
@@ -135,6 +134,7 @@ export class Game {
     requestAnimationFrame(() => {
       if (this.player) {
         this.player.resizeForViewport(this.app.screen.height);
+        this.player.setGroundY(this.getGroundY());
         this.placePlayerOnFloor();
         this.player.keepVisualInsideWorld(this.getWorldSize().width);
         this.camera?.resize(this.getViewportSize(), this.getWorldSize());
@@ -182,6 +182,13 @@ export class Game {
         this.currentScene?.getWorldHeight(this.app.screen.height) ??
         this.app.screen.height,
     };
+  }
+
+  private getGroundY() {
+    return (
+      this.currentScene?.getFloorY(this.app.screen.height) ??
+      this.app.screen.height - WORKSHOP_CONFIG.floor.height
+    );
   }
 
   public destroy() {
