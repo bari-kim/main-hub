@@ -1,0 +1,1 @@
+{"version":3,"file":"patch-notes.service.js","sourceRoot":"","sources":["../../src/patch-notes/patch-notes.service.ts"],"names":[],"mappings":";;;;;;;;;AAAA,2CAA4C;AAC5C,yDAAsD;AAI/C,IAAM,iBAAiB,GAAvB,MAAM,iBAAiB;IACrB,mBAAmB;QACxB,OAAO,mCAAgB,CAAC;IAC1B,CAAC;CACF,CAAA;AAJY,8CAAiB;4BAAjB,iBAAiB;IAD7B,IAAA,mBAAU,GAAE;GACA,iBAAiB,CAI7B"}

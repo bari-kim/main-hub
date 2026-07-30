@@ -3,6 +3,7 @@ import type { Interactable, InteractionPoint } from "./Interactable";
 
 type InteractionSystemUpdateArgs = {
   playerPosition: InteractionPoint;
+  pointerPosition: InteractionPoint;
   input: InputManager;
   interactables: Interactable[];
 };
@@ -14,6 +15,7 @@ type InteractionResult = {
 export class InteractionSystem {
   public update({
     playerPosition,
+    pointerPosition,
     input,
     interactables,
   }: InteractionSystemUpdateArgs) {
@@ -40,6 +42,7 @@ export class InteractionSystem {
     for (const key of pressedKeys) {
       const closestInteractable = this.findClosestInteractable(
         playerPosition,
+        pointerPosition,
         interactables,
         key,
       );
@@ -55,6 +58,7 @@ export class InteractionSystem {
 
   private findClosestInteractable(
     playerPosition: InteractionPoint,
+    pointerPosition: InteractionPoint,
     interactables: Interactable[],
     key: string,
   ) {
@@ -63,6 +67,13 @@ export class InteractionSystem {
 
     for (const interactable of interactables) {
       if (!interactable.interactionKeys.some((interactionKey) => interactionKey.toLowerCase() === key)) {
+        continue;
+      }
+
+      if (key === "mouseleft") {
+        if (interactable.mouseClickHitTest && interactable.mouseClickHitTest(pointerPosition)) {
+          return interactable;
+        }
         continue;
       }
 

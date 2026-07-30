@@ -5,20 +5,29 @@ import type { Interactable } from "../interaction/Interactable";
 type WorkshopObjectKey = "door" | "desk" | "notice";
 type Point = { x: number; y: number };
 type DoorVisualState = "closed" | "open";
+type NoticeTextureAlias = "noticeEmpty" | "notice01" | "notice02";
+type ObjectMovementBounds = {
+  minXRatio: number;
+  maxXRatio: number;
+};
 
 const FLOOR_SEAM_OVERLAP = 1;
 const DOOR_INTERACTION_OPEN_DURATION_MS = 3000;
 const DOOR_HOVER_CLOSE_DELAY_MS = 1500;
+const NOTICE_SCALE_MULTIPLIER = 1.6;
 const DOOR_OPEN_SOUND_SRC = "/game-assets/sound/door-opening.wav";
 const DOOR_CLOSE_SOUND_SRC = "/game-assets/sound/door-close.wav";
 
 export class WorkshopScene extends Container {
   private readonly objects = new Map<WorkshopObjectKey, Sprite>();
   private readonly doorBaseFrameSize = this.getTextureSize("door");
+  private readonly noticeTextureAlias: NoticeTextureAlias;
+  private readonly onNoticeInteract?: () => void;
   private readonly doorTextures = {
     closed: Assets.get<Texture>("door"),
     open: Assets.get<Texture>("doorOpen"),
   };
+
   private doorOpenUntil = 0;
   private doorCloseAt = 0;
   private previousHoveredDoor = false;
@@ -29,8 +38,14 @@ export class WorkshopScene extends Container {
   private readonly wall: Sprite;
   private readonly floor: TilingSprite;
 
-  constructor() {
+  constructor(args?: {
+    noticeTextureAlias?: NoticeTextureAlias;
+    onNoticeInteract?: () => void;
+  }) {
     super();
+
+    this.noticeTextureAlias = args?.noticeTextureAlias ?? "noticeEmpty";
+    this.onNoticeInteract = args?.onNoticeInteract;
 
     this.wall = this.createWall();
     this.floor = this.createFloor();
@@ -39,15 +54,15 @@ export class WorkshopScene extends Container {
     this.addChild(this.floor);
 
     this.createObject("door", "door", 0.5, 1);
-    this.createObject("notice", "notice", 0.5, 0.5);
+    this.createObject("notice", this.noticeTextureAlias, 0.5, 0.5);
     this.createObject("desk", "desk", 0.5, 1);
   }
 
-  public resize(viewportHeight: number) {
+  public resize(viewportWidth: number, viewportHeight: number) {
     this.drawBackground(viewportHeight);
-    this.placeDoor(viewportHeight);
-    this.placeNotice(viewportHeight);
-    this.placeDesk(viewportHeight);
+    this.placeDoor(viewportWidth, viewportHeight);
+    this.placeDesk(viewportWidth, viewportHeight);
+    this.placeNotice(viewportWidth, viewportHeight);
   }
 
   public updateDoorState(args: {
@@ -125,6 +140,26 @@ export class WorkshopScene extends Container {
     );
   }
 
+  public isNoticeHovered(pointerWorldPosition: Point) {
+    const notice = this.objects.get("notice");
+
+    if (!notice) {
+      return false;
+    }
+
+    const left = notice.x - notice.width / 2;
+    const right = notice.x + notice.width / 2;
+    const top = notice.y - notice.height / 2;
+    const bottom = notice.y + notice.height / 2;
+
+    return (
+      pointerWorldPosition.x >= left &&
+      pointerWorldPosition.x <= right &&
+      pointerWorldPosition.y >= top &&
+      pointerWorldPosition.y <= bottom
+    );
+  }
+
   public getWorldWidth() {
     return WORKSHOP_CONFIG.world.width;
   }
@@ -157,7 +192,6 @@ export class WorkshopScene extends Container {
         interactionKeys: ["w", "mouseleft"],
         interact: () => {
           this.openDoor(performance.now());
-          console.log("문 상호작용");
         },
       });
     }
@@ -169,8 +203,9 @@ export class WorkshopScene extends Container {
         interactionPosition: this.getObjectInteractionPosition(notice),
         interactionDistance: WORKSHOP_CONFIG.interaction.noticeDistance,
         interactionKeys: ["e", "mouseleft"],
+        mouseClickHitTest: (pointerPosition) => this.isNoticeHovered(pointerPosition),
         interact: () => {
-          console.log("게시판 상호작용");
+          this.onNoticeInteract?.();
         },
       });
     }
@@ -182,9 +217,7 @@ export class WorkshopScene extends Container {
         interactionPosition: this.getObjectInteractionPosition(desk),
         interactionDistance: WORKSHOP_CONFIG.interaction.deskDistance,
         interactionKeys: ["e", "mouseleft"],
-        interact: () => {
-          console.log("책상 상호작용");
-        },
+        interact: () => {},
       });
     }
 
@@ -301,7 +334,7 @@ export class WorkshopScene extends Container {
     this.floor.y = this.getFloorY(viewportHeight);
   }
 
-  private placeDoor(viewportHeight: number) {
+  private placeDoor(viewportWidth: number, viewportHeight: number) {
     const door = this.objects.get("door");
 
     if (!door) {
@@ -311,15 +344,22 @@ export class WorkshopScene extends Container {
     const displayHeight =
       viewportHeight * WORKSHOP_CONFIG.objects.door.displayHeightRatio;
     const scale = displayHeight / this.doorBaseFrameSize.height;
+    const x = this.resolveObjectX(
+      viewportWidth,
+      door,
+      WORKSHOP_CONFIG.objects.door.positionXRatio,
+      WORKSHOP_CONFIG.objects.door.movementBounds,
+    );
+    const y = this.resolveObjectY(
+      viewportHeight,
+      WORKSHOP_CONFIG.objects.door.positionYRatio,
+    );
 
     door.scale.set(scale);
-    door.position.set(
-      WORKSHOP_CONFIG.player.startX,
-      this.getFloorY(viewportHeight),
-    );
+    door.position.set(x, y);
   }
 
-  private placeDesk(viewportHeight: number) {
+  private placeDesk(viewportWidth: number, viewportHeight: number) {
     const desk = this.objects.get("desk");
 
     if (!desk) {
@@ -329,16 +369,24 @@ export class WorkshopScene extends Container {
     const displayHeight =
       viewportHeight * WORKSHOP_CONFIG.objects.desk.displayHeightRatio;
     const scale = displayHeight / desk.texture.height;
+    const x = this.resolveObjectX(
+      viewportWidth,
+      desk,
+      WORKSHOP_CONFIG.objects.desk.positionXRatio,
+      WORKSHOP_CONFIG.objects.desk.movementBounds,
+    );
+    const y = this.resolveObjectY(
+      viewportHeight,
+      WORKSHOP_CONFIG.objects.desk.positionYRatio,
+    );
 
     desk.scale.set(scale);
-    desk.position.set(
-      WORKSHOP_CONFIG.objects.desk.x,
-      this.getFloorY(viewportHeight),
-    );
+    desk.position.set(x, y);
   }
 
-  private placeNotice(viewportHeight: number) {
+  private placeNotice(viewportWidth: number, viewportHeight: number) {
     const notice = this.objects.get("notice");
+    const door = this.objects.get("door");
 
     if (!notice) {
       return;
@@ -347,12 +395,22 @@ export class WorkshopScene extends Container {
     const displayHeight =
       viewportHeight * WORKSHOP_CONFIG.objects.notice.displayHeightRatio;
     const scale = displayHeight / notice.texture.height;
-    const noticeX =
-      (WORKSHOP_CONFIG.player.startX + WORKSHOP_CONFIG.objects.desk.x) / 2;
-    const noticeY = this.getWallHeight(viewportHeight) / 2;
+    const noticeHalfWidth = (notice.texture.width * scale * NOTICE_SCALE_MULTIPLIER) / 2;
+    const x = this.resolveObjectX(
+      viewportWidth,
+      notice,
+      WORKSHOP_CONFIG.objects.notice.positionXRatio,
+      WORKSHOP_CONFIG.objects.notice.movementBounds,
+      noticeHalfWidth,
+      door ? door.x + door.width / 2 + noticeHalfWidth : undefined,
+    );
+    const noticeY = this.resolveObjectY(
+      viewportHeight,
+      WORKSHOP_CONFIG.objects.notice.positionYRatio,
+    );
 
-    notice.scale.set(scale);
-    notice.position.set(noticeX, noticeY);
+    notice.scale.set(scale * NOTICE_SCALE_MULTIPLIER);
+    notice.position.set(x, noticeY);
   }
 
   private getWallHeight(viewportHeight: number) {
@@ -378,6 +436,33 @@ export class WorkshopScene extends Container {
       x: object.x,
       y: object.y,
     };
+  }
+
+  private resolveObjectX(
+    viewportWidth: number,
+    object: Sprite,
+    positionXRatio: number,
+    movementBounds?: ObjectMovementBounds,
+    halfWidth?: number,
+    minimumXOverride?: number,
+  ) {
+    const preferredX = viewportWidth * positionXRatio;
+    const currentHalfWidth = halfWidth ?? object.width / 2;
+    const minBound =
+      minimumXOverride ??
+      (movementBounds ? viewportWidth * movementBounds.minXRatio : 0);
+    const maxBound = movementBounds
+      ? viewportWidth * movementBounds.maxXRatio
+      : viewportWidth - currentHalfWidth;
+
+    return Math.max(
+      minBound + currentHalfWidth,
+      Math.min(preferredX, maxBound - currentHalfWidth),
+    );
+  }
+
+  private resolveObjectY(viewportHeight: number, positionYRatio: number) {
+    return this.getWallHeight(viewportHeight) * positionYRatio;
   }
 
   private getTextureSize(alias: "door" | "doorOpen") {

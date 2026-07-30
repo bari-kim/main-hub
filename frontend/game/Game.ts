@@ -6,6 +6,7 @@ import {
 } from "./assets/loadAssets";
 import { Camera } from "./camera/Camera";
 import { WORKSHOP_CONFIG } from "./constants/workshop";
+import type { PatchNote, PatchNotesResponse } from "./content/patchNotes";
 import { InputManager } from "./input/InputManager";
 import { Player } from "./entities/player/Player";
 import { InteractionSystem } from "./interaction/InteractionSystem";
@@ -30,6 +31,11 @@ const ROOM_FADE_DURATION_MS = 700;
 const ROOM_INTERACTION_UNLOCK_DELAY_MS = 3000;
 const TITLE_BACKGROUND_COLOR = "#15131a";
 
+type GameOptions = {
+  patchNotes?: PatchNotesResponse;
+  onNoticeInteract?: (patchNotes: PatchNote[]) => void;
+};
+
 export class Game {
   private readonly app = new Application();
   private readonly worldContainer = new Container();
@@ -46,6 +52,13 @@ export class Game {
   private destroyed = false;
   private sceneState: RoomEntranceState = "title";
   private activeTimers = new Set<number>();
+  private readonly patchNotes: PatchNotesResponse;
+  private readonly onNoticeInteract?: (patchNotes: PatchNote[]) => void;
+
+  constructor(options?: GameOptions) {
+    this.patchNotes = options?.patchNotes ?? { monthPatchCount: 0, patchNotes: [] };
+    this.onNoticeInteract = options?.onNoticeInteract;
+  }
 
   public async start(container: HTMLDivElement) {
     await this.app.init({
@@ -55,7 +68,7 @@ export class Game {
     });
 
     if (this.destroyed) {
-      this.app.destroy(true);
+      this.destroyPixiApplication();
       return;
     }
 
@@ -127,8 +140,11 @@ export class Game {
   }
 
   private async createRoomScene() {
-    this.roomScene = new WorkshopScene();
-    this.roomScene.resize(this.app.screen.height);
+    this.roomScene = new WorkshopScene({
+      noticeTextureAlias: this.getNoticeTextureAlias(this.patchNotes.monthPatchCount),
+      onNoticeInteract: this.handleNoticeInteract,
+    });
+    this.roomScene.resize(this.app.screen.width, this.app.screen.height);
     this.roomScene.visible = false;
     this.roomScene.setInteractionLocked(true);
     this.worldContainer.addChildAt(this.roomScene, 0);
@@ -188,13 +204,14 @@ export class Game {
     this.camera?.update();
     this.camera?.applyTo(this.worldContainer);
 
+    const pointerWorldPosition = this.getPointerWorldPosition();
+
     const interactionResult = this.interactionSystem?.update({
       playerPosition: this.getPlayerInteractionPosition(),
+      pointerPosition: pointerWorldPosition,
       input: this.input,
       interactables: this.roomScene.getInteractables(),
     });
-
-    const pointerWorldPosition = this.getPointerWorldPosition();
 
     this.roomScene.updateDoorState({
       hoveredDoor: this.roomScene.isDoorHovered(pointerWorldPosition),
@@ -212,7 +229,7 @@ export class Game {
       }
 
       if (this.roomScene) {
-        this.roomScene.resize(this.app.screen.height);
+        this.roomScene.resize(this.app.screen.width, this.app.screen.height);
       }
 
       if (this.player) {
@@ -256,6 +273,38 @@ export class Game {
 
   private createCamera() {
     return new Camera(this.getViewportSize(), this.getWorldSize());
+  }
+
+  private getNoticeTextureAlias(monthPatchCount: number) {
+    if (monthPatchCount <= 2) {
+      return "noticeEmpty";
+    }
+
+    if (monthPatchCount <= 5) {
+      return "notice01";
+    }
+
+    return "notice02";
+  }
+
+  private handleNoticeInteract = () => {
+    this.onNoticeInteract?.(this.patchNotes.patchNotes);
+  };
+
+  private destroyPixiApplication() {
+    if (this.app.ticker) {
+      this.app.ticker.remove(this.update);
+    }
+
+    const appWithResizeHook = this.app as Application & {
+      _cancelResize?: unknown;
+    };
+
+    if (typeof appWithResizeHook._cancelResize !== "function") {
+      return;
+    }
+
+    this.app.destroy();
   }
 
   private getViewportSize() {
@@ -413,8 +462,7 @@ export class Game {
     this.input = null;
     this.interactionSystem = null;
 
-    this.app.ticker.remove(this.update);
-    this.app.destroy(true);
+    this.destroyPixiApplication();
   }
 
   private handleTitleDoorOpenStart = () => {

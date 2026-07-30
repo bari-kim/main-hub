@@ -36,7 +36,19 @@ export const assetsManifest: AssetsManifest = {
         },
         {
           alias: "notice",
-          src: "/game-assets/objects/notice_temp.png",
+          src: "/game-assets/objects/notice_empty.png",
+        },
+        {
+          alias: "noticeEmpty",
+          src: "/game-assets/objects/notice_empty.png",
+        },
+        {
+          alias: "notice01",
+          src: "/game-assets/objects/notice01.png",
+        },
+        {
+          alias: "notice02",
+          src: "/game-assets/objects/notice02.png",
         },
         {
           alias: "desk",

@@ -10,5 +10,6 @@ export interface Interactable {
   readonly interactionPosition: InteractionPoint;
   readonly interactionDistance: number;
   readonly interactionKeys: InteractionKey[];
+  readonly mouseClickHitTest?: (pointerPosition: InteractionPoint) => boolean;
   interact(): void;
 }
