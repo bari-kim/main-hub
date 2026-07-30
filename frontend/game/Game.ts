@@ -128,7 +128,7 @@ export class Game {
 
   private async createRoomScene() {
     this.roomScene = new WorkshopScene();
-    this.roomScene.resize(this.app.screen.height, this.getPlayerDisplayHeight());
+    this.roomScene.resize(this.app.screen.height);
     this.roomScene.visible = false;
     this.roomScene.setInteractionLocked(true);
     this.worldContainer.addChildAt(this.roomScene, 0);
@@ -212,10 +212,7 @@ export class Game {
       }
 
       if (this.roomScene) {
-        this.roomScene.resize(
-          this.app.screen.height,
-          this.getPlayerDisplayHeight(),
-        );
+        this.roomScene.resize(this.app.screen.height);
       }
 
       if (this.player) {
@@ -280,7 +277,8 @@ export class Game {
   private getGroundY() {
     return (
       this.roomScene?.getFloorY(this.app.screen.height) ??
-      this.app.screen.height - WORKSHOP_CONFIG.floor.height
+      this.app.screen.height -
+        this.app.screen.height * WORKSHOP_CONFIG.floor.displayHeightRatio
     );
   }
 

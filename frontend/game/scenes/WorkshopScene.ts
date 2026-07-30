@@ -14,6 +14,7 @@ const DOOR_CLOSE_SOUND_SRC = "/game-assets/sound/door-close.wav";
 
 export class WorkshopScene extends Container {
   private readonly objects = new Map<WorkshopObjectKey, Sprite>();
+  private readonly doorBaseFrameSize = this.getTextureSize("door");
   private readonly doorTextures = {
     closed: Assets.get<Texture>("door"),
     open: Assets.get<Texture>("doorOpen"),
@@ -42,9 +43,9 @@ export class WorkshopScene extends Container {
     this.createObject("desk", "desk", 0.5, 1);
   }
 
-  public resize(viewportHeight: number, playerDisplayHeight: number) {
+  public resize(viewportHeight: number) {
     this.drawBackground(viewportHeight);
-    this.placeDoor(viewportHeight, playerDisplayHeight);
+    this.placeDoor(viewportHeight);
     this.placeNotice(viewportHeight);
     this.placeDesk(viewportHeight);
   }
@@ -133,7 +134,11 @@ export class WorkshopScene extends Container {
   }
 
   public getFloorY(viewportHeight: number) {
-    return viewportHeight - WORKSHOP_CONFIG.floor.height - FLOOR_SEAM_OVERLAP;
+    return (
+      viewportHeight -
+      this.getFloorHeight(viewportHeight) -
+      FLOOR_SEAM_OVERLAP
+    );
   }
 
   public getInteractables(): Interactable[] {
@@ -264,7 +269,7 @@ export class WorkshopScene extends Container {
     const floor = new TilingSprite({
       texture: Assets.get<Texture>("floor"),
       width: WORKSHOP_CONFIG.world.width,
-      height: WORKSHOP_CONFIG.floor.height,
+      height: 1,
     });
 
     floor.tileScale.set(WORKSHOP_CONFIG.floor.tileScale);
@@ -291,11 +296,12 @@ export class WorkshopScene extends Container {
     this.wall.position.set(0, 0);
 
     this.floor.width = WORKSHOP_CONFIG.world.width;
-    this.floor.height = WORKSHOP_CONFIG.floor.height;
+    this.floor.height = this.getFloorHeight(viewportHeight);
+    this.floor.tileScale.set(this.getFloorTileScale(viewportHeight));
     this.floor.y = this.getFloorY(viewportHeight);
   }
 
-  private placeDoor(viewportHeight: number, playerDisplayHeight: number) {
+  private placeDoor(viewportHeight: number) {
     const door = this.objects.get("door");
 
     if (!door) {
@@ -303,8 +309,8 @@ export class WorkshopScene extends Container {
     }
 
     const displayHeight =
-      playerDisplayHeight * WORKSHOP_CONFIG.objects.door.playerHeightRatio;
-    const scale = displayHeight / door.texture.height;
+      viewportHeight * WORKSHOP_CONFIG.objects.door.displayHeightRatio;
+    const scale = displayHeight / this.doorBaseFrameSize.height;
 
     door.scale.set(scale);
     door.position.set(
@@ -352,7 +358,18 @@ export class WorkshopScene extends Container {
   private getWallHeight(viewportHeight: number) {
     return Math.max(
       0,
-      viewportHeight - WORKSHOP_CONFIG.floor.height - FLOOR_SEAM_OVERLAP,
+      viewportHeight - this.getFloorHeight(viewportHeight) - FLOOR_SEAM_OVERLAP,
+    );
+  }
+
+  private getFloorHeight(viewportHeight: number) {
+    return viewportHeight * WORKSHOP_CONFIG.floor.displayHeightRatio;
+  }
+
+  private getFloorTileScale(viewportHeight: number) {
+    return (
+      WORKSHOP_CONFIG.floor.tileScale *
+      (viewportHeight / WORKSHOP_CONFIG.floor.tileScaleBaseHeight)
     );
   }
 
@@ -360,6 +377,15 @@ export class WorkshopScene extends Container {
     return {
       x: object.x,
       y: object.y,
+    };
+  }
+
+  private getTextureSize(alias: "door" | "doorOpen") {
+    const texture = Assets.get<Texture>(alias);
+
+    return {
+      width: texture.orig.width,
+      height: texture.orig.height,
     };
   }
 }

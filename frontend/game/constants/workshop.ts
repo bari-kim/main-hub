@@ -3,8 +3,9 @@ export const WORKSHOP_CONFIG = {
     width: 2400,
   },
   floor: {
-    height: 120,
+    displayHeightRatio: 0.12,
     tileScale: 4,
+    tileScaleBaseHeight: 1080,
   },
   player: {
     startX: 360,
@@ -12,7 +13,7 @@ export const WORKSHOP_CONFIG = {
   },
   objects: {
     door: {
-      playerHeightRatio: 1.5,
+      displayHeightRatio: 0.65,
     },
     desk: {
       x: 1700,

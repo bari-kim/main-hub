@@ -200,7 +200,10 @@ export class TitleScene extends Container {
   ) {
     const doorFrame = this.doorFrames[0];
     const doorDisplayHeight = doorFrame.height * doorScale;
-    const fontSize = Math.max(18, Math.min(42, Math.round(doorDisplayHeight * 0.06)));
+    const fontSize = Math.max(
+      12,
+      Math.min(36, Math.round(doorDisplayHeight * 0.055)),
+    );
 
     this.pressEnter.style = new TextStyle({
       fontFamily: [TITLE_FONT_FAMILY, PRESS_ENTER_FALLBACK_FONT],
