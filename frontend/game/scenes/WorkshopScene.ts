@@ -4,9 +4,13 @@ import type { Interactable } from "../interaction/Interactable";
 
 type WorkshopObjectKey = "door" | "desk" | "notice";
 type Point = { x: number; y: number };
+type DoorVisualState = "closed" | "open";
 
 const FLOOR_SEAM_OVERLAP = 1;
-const DOOR_INTERACTION_OPEN_DURATION_MS = 5000;
+const DOOR_INTERACTION_OPEN_DURATION_MS = 3000;
+const DOOR_HOVER_CLOSE_DELAY_MS = 1500;
+const DOOR_OPEN_SOUND_SRC = "/game-assets/sound/door-opening.wav";
+const DOOR_CLOSE_SOUND_SRC = "/game-assets/sound/door-close.wav";
 
 export class WorkshopScene extends Container {
   private readonly objects = new Map<WorkshopObjectKey, Sprite>();
@@ -15,6 +19,11 @@ export class WorkshopScene extends Container {
     open: Assets.get<Texture>("doorOpen"),
   };
   private doorOpenUntil = 0;
+  private doorCloseAt = 0;
+  private previousHoveredDoor = false;
+  private doorVisualState: DoorVisualState = "closed";
+  private interactionLocked = true;
+  private doorSoundLockUntil = 0;
 
   private readonly wall: Sprite;
   private readonly floor: TilingSprite;
@@ -51,6 +60,13 @@ export class WorkshopScene extends Container {
       return;
     }
 
+    if (this.interactionLocked) {
+      this.forceDoorClosed(true);
+      return;
+    }
+
+    const wasHovered = this.previousHoveredDoor;
+
     if (args.interactedDoor) {
       this.doorOpenUntil = Math.max(
         this.doorOpenUntil,
@@ -58,16 +74,34 @@ export class WorkshopScene extends Container {
       );
     }
 
-    const isOpen =
-      args.hoveredDoor || args.now < this.doorOpenUntil || args.interactedDoor;
+    if (args.hoveredDoor) {
+      this.openDoor(args.now);
+    } else if (wasHovered && !args.hoveredDoor && this.doorCloseAt === 0) {
+      this.doorCloseAt = args.now + DOOR_HOVER_CLOSE_DELAY_MS;
+    }
 
-    const nextTexture = isOpen
-      ? this.doorTextures.open
-      : this.doorTextures.closed;
+    const shouldStayOpen =
+      args.hoveredDoor ||
+      args.interactedDoor ||
+      args.now < this.doorOpenUntil ||
+      args.now < this.doorCloseAt;
+
+    if (shouldStayOpen) {
+      this.openDoor(args.now);
+    } else if (this.doorVisualState === "open") {
+      this.closeDoor(args.now);
+    }
+
+    const nextTexture =
+      this.doorVisualState === "open"
+        ? this.doorTextures.open
+        : this.doorTextures.closed;
 
     if (door.texture !== nextTexture) {
       door.texture = nextTexture;
     }
+
+    this.previousHoveredDoor = args.hoveredDoor;
   }
 
   public isDoorHovered(pointerWorldPosition: Point) {
@@ -103,6 +137,10 @@ export class WorkshopScene extends Container {
   }
 
   public getInteractables(): Interactable[] {
+    if (this.interactionLocked) {
+      return [];
+    }
+
     const interactables: Interactable[] = [];
 
     const door = this.objects.get("door");
@@ -113,6 +151,7 @@ export class WorkshopScene extends Container {
         interactionDistance: WORKSHOP_CONFIG.interaction.doorDistance,
         interactionKeys: ["w", "mouseleft"],
         interact: () => {
+          this.openDoor(performance.now());
           console.log("문 상호작용");
         },
       });
@@ -145,6 +184,72 @@ export class WorkshopScene extends Container {
     }
 
     return interactables;
+  }
+
+  public setInteractionLocked(locked: boolean) {
+    this.interactionLocked = locked;
+
+    if (locked) {
+      this.forceDoorClosed(true);
+    }
+  }
+
+  public destroy() {
+    super.destroy();
+  }
+
+  private openDoor(now: number) {
+    if (this.doorVisualState === "open") {
+      return;
+    }
+
+    this.doorVisualState = "open";
+    this.playDoorSound("open", now);
+  }
+
+  private forceDoorClosed(silent: boolean) {
+    this.doorOpenUntil = 0;
+    this.doorCloseAt = 0;
+    this.previousHoveredDoor = false;
+    this.doorVisualState = "closed";
+
+    const door = this.objects.get("door");
+    if (door && door.texture !== this.doorTextures.closed) {
+      door.texture = this.doorTextures.closed;
+    }
+
+    if (!silent) {
+      this.playDoorSound("close", performance.now());
+    }
+  }
+
+  private closeDoor(now: number) {
+    if (this.doorVisualState === "closed") {
+      return;
+    }
+
+    this.doorOpenUntil = 0;
+    this.doorCloseAt = 0;
+    this.doorVisualState = "closed";
+    this.playDoorSound("close", now);
+  }
+
+  private playDoorSound(state: "open" | "close", now: number) {
+    if (now < this.doorSoundLockUntil) {
+      return;
+    }
+
+    this.doorSoundLockUntil = now + 250;
+
+    const src = state === "open" ? DOOR_OPEN_SOUND_SRC : DOOR_CLOSE_SOUND_SRC;
+
+    try {
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      void audio.play().catch(() => {});
+    } catch {
+      // Ignore missing audio files or autoplay blocks.
+    }
   }
 
   private createWall() {

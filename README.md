@@ -1,30 +1,76 @@
-# Bari's Room
+﻿# Bari's Room
 
-This repository is split into two independent applications:
+Bari's Room은 Next.js, React, PixiJS, TypeScript로 만든 횡스크롤 웹 게임입니다.
 
-- `frontend/`: React game client, UI, API calls, and static asset handling
-- `backend/`: Spring Boot REST API, admin tools, content services, and persistence
+현재 작업 단계는 `v0.0`입니다.
 
-## Current layout
+이 저장소는 크게 두 방향으로 확장됩니다.
+- `frontend/`: 실제 게임이 실행되는 클라이언트
+- `backend/`: 앞으로 콘텐츠, 저장, 관리 기능이 들어갈 서버
+
+## 앞으로의 방향
+
+현재는 어두운 시작 화면과 작업실 입장 연출을 중심으로 진행 중이지만, 이후에는 더 많은 장면과 상호작용이 이어질 예정입니다.
+
+앞으로 추가될 내용은 이런 흐름을 중심으로 확장됩니다.
+- TitleScene, RoomScene, 그리고 이후 연결되는 다른 방들
+- 문, 게시판, 책상, 선반, 모니터 같은 상호작용 오브젝트
+- 플레이어 이동, 충돌, 카메라, 반응형 리사이즈 처리
+- 입장 연출, 발소리, 문 여닫기, 방 분위기용 효과음과 배경음
+- 픽셀 스프라이트 교체를 고려한 에셋 로딩 구조
+- 일지, 방명록, 아카이브, 콘텐츠 관리 기능
+
+## 현재 구조
 
 ```text
 project-root/
-������ frontend/
-������ backend/
-������ docs/
-������ README.md
+├── frontend/
+├── backend/
+├── docs/
+└── README.md
 ```
 
-## Frontend
+## 프론트엔드
 
-Run from `frontend/`:
+프론트엔드는 실제로 플레이하는 게임 클라이언트입니다.
+
+주요 역할은 다음과 같습니다.
+- PixiJS 앱 초기화
+- 씬 전환 관리
+- 플레이어 이동과 카메라
+- 상호작용 판정
+- 에셋 로딩
+- 오디오 재생
+- 리사이즈 대응
+
+실행 방법은 `frontend/`에서 아래처럼 합니다.
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Backend
+## 백엔드
 
-The backend is scaffolded as an independent Spring Boot project under `backend/`.
-It currently contains only the application skeleton so the frontend structure can be separated first without changing game behavior.
+백엔드는 `backend/` 아래에 별도로 구성되어 있습니다.
+
+현재는 프론트엔드 구조를 먼저 분리해 두기 위한 뼈대만 있는 상태이고, 앞으로는 다음 같은 역할을 맡게 됩니다.
+- REST API
+- 관리 페이지와 콘텐츠 도구
+- 일지 / 방명록 / 아카이브 데이터
+- 저장소와 파일 처리
+- 향후 게임 상태나 콘텐츠 동기화 기능
+
+## 문서
+
+이 프로젝트의 기준 문서는 다음을 따릅니다.
+- `docs/DevGuide.md`
+- `docs/Decisions.md`
+- `docs/Roadmap.md`
+- `baris-room.md`
+
+코드와 기획이 다를 때는 최신 결정 사항이 우선입니다.
+
+## 한 줄 요약
+
+이 프로젝트는 조용한 작업실로 들어가는 게임이지만, 앞으로는 여러 방과 콘텐츠가 이어지는 더 큰 공간으로 확장될 수 있게 설계하고 있습니다.

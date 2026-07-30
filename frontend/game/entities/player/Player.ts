@@ -13,6 +13,7 @@ const PLAYER_JUMP_GRAVITY = 2400;
 const PLAYER_JUMP_APEX_RATIO = 0.5;
 const PLAYER_GROUND_EPSILON = 0.5;
 const PLAYER_AIR_CONTROL_MULTIPLIER = 1;
+const FOOTSTEPS_LOOP_SRC = "/game-assets/sound/footsteps.wav";
 
 type PlayerDirection = "left" | "right";
 
@@ -31,6 +32,8 @@ export class Player extends Container {
   private direction: PlayerDirection = "right";
   private groundY = 0;
   private verticalVelocity = 0;
+  private inputEnabled = true;
+  private footstepsAudio: HTMLAudioElement | null = null;
 
   private constructor(texture: Texture | null) {
     super();
@@ -107,6 +110,14 @@ export class Player extends Container {
     worldWidth: number,
     groundY: number,
   ) {
+    if (!this.inputEnabled) {
+      this.groundY = groundY;
+      this.y = groundY;
+      this.verticalVelocity = 0;
+      this.stopFootsteps();
+      return false;
+    }
+
     const deltaSeconds = deltaTime / 60;
     const previousX = this.x;
     const movementDistance = this.getHorizontalMovementDistance(deltaSeconds);
@@ -136,6 +147,12 @@ export class Player extends Container {
     }
 
     this.keepVisualInsideWorld(worldWidth);
+
+    if (this.x !== previousX) {
+      this.startFootsteps();
+    } else {
+      this.stopFootsteps();
+    }
 
     return this.x !== previousX;
   }
@@ -218,6 +235,19 @@ export class Player extends Container {
     return this.direction;
   }
 
+  public setInputEnabled(enabled: boolean) {
+    this.inputEnabled = enabled;
+
+    if (!enabled) {
+      this.stopFootsteps();
+    }
+  }
+
+  public destroy() {
+    this.stopFootsteps();
+    super.destroy();
+  }
+
   private isGrounded() {
     return Math.abs(this.y - this.groundY) <= PLAYER_GROUND_EPSILON;
   }
@@ -235,5 +265,34 @@ export class Player extends Container {
       : PLAYER_AIR_CONTROL_MULTIPLIER;
 
     return PLAYER_SPEED * deltaSeconds * airControlMultiplier;
+  }
+
+  private startFootsteps() {
+    if (this.footstepsAudio) {
+      return;
+    }
+
+    try {
+      const audio = new Audio(FOOTSTEPS_LOOP_SRC);
+      audio.loop = true;
+      audio.volume = 0.45;
+      audio.preload = "auto";
+      void audio.play().catch(() => {
+        // Ignore autoplay restrictions.
+      });
+      this.footstepsAudio = audio;
+    } catch {
+      this.footstepsAudio = null;
+    }
+  }
+
+  private stopFootsteps() {
+    if (!this.footstepsAudio) {
+      return;
+    }
+
+    this.footstepsAudio.pause();
+    this.footstepsAudio.currentTime = 0;
+    this.footstepsAudio = null;
   }
 }

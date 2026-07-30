@@ -2,6 +2,7 @@ import { Assets, Texture } from "pixi.js";
 import { assetsManifest } from "./manifest";
 
 let initializePromise: Promise<void> | null = null;
+let titleLoadPromise: Promise<void> | null = null;
 let workshopLoadPromise: Promise<void> | null = null;
 let playerLoadPromise: Promise<void> | null = null;
 
@@ -19,6 +20,16 @@ export async function loadWorkshopAssets() {
   });
 
   await workshopLoadPromise;
+}
+
+export async function loadTitleAssets() {
+  await initializeAssets();
+
+  titleLoadPromise ??= Assets.loadBundle("title").then(() => {
+    applyNearestScaleMode(["doorSheet"]);
+  });
+
+  await titleLoadPromise;
 }
 
 export async function loadPlayerAssets() {
