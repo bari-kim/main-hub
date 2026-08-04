@@ -15,6 +15,13 @@ const PLAYER_GROUND_EPSILON = 0.5;
 const PLAYER_AIR_CONTROL_MULTIPLIER = 1;
 const FOOTSTEPS_LOOP_SRC = "/game-assets/sound/footsteps.wav";
 
+// Temporary walk-cycle stand-in until real Walk sprite frames replace the static art.
+// Purely visual: only offsets `character` inside `visualRoot`, never touches
+// this.x / this.y (world position) or the collision/interaction/sort anchors.
+const WALK_BOB_AMPLITUDE = 14;
+const WALK_BOB_FREQUENCY = 11;
+const WALK_BOB_RECOVERY_SPEED = 14;
+
 type PlayerDirection = "left" | "right";
 
 type Bounds = {
@@ -34,6 +41,8 @@ export class Player extends Container {
   private verticalVelocity = 0;
   private inputEnabled = true;
   private footstepsAudio: HTMLAudioElement | null = null;
+  private walkCyclePhase = 0;
+  private walkBobOffset = 0;
 
   private constructor(texture: Texture | null) {
     super();
@@ -115,6 +124,7 @@ export class Player extends Container {
       this.y = groundY;
       this.verticalVelocity = 0;
       this.stopFootsteps();
+      this.resetWalkBob();
       return false;
     }
 
@@ -148,13 +158,36 @@ export class Player extends Container {
 
     this.keepVisualInsideWorld(worldWidth);
 
-    if (this.x !== previousX) {
+    const didMoveHorizontally = this.x !== previousX;
+
+    if (didMoveHorizontally) {
       this.startFootsteps();
     } else {
       this.stopFootsteps();
     }
 
-    return this.x !== previousX;
+    this.updateWalkBob(deltaSeconds, didMoveHorizontally && this.isGrounded());
+
+    return didMoveHorizontally;
+  }
+
+  private updateWalkBob(deltaSeconds: number, isWalking: boolean) {
+    if (isWalking) {
+      this.walkCyclePhase += deltaSeconds * WALK_BOB_FREQUENCY;
+      this.walkBobOffset = Math.abs(Math.sin(this.walkCyclePhase)) * WALK_BOB_AMPLITUDE;
+    } else {
+      this.walkCyclePhase = 0;
+      const recovery = Math.min(1, deltaSeconds * WALK_BOB_RECOVERY_SPEED);
+      this.walkBobOffset += (0 - this.walkBobOffset) * recovery;
+    }
+
+    this.character.y = -this.walkBobOffset;
+  }
+
+  private resetWalkBob() {
+    this.walkCyclePhase = 0;
+    this.walkBobOffset = 0;
+    this.character.y = 0;
   }
 
   private setDirection(direction: PlayerDirection) {
