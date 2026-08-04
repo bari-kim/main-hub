@@ -1,4 +1,4 @@
-import { Assets, Container, Graphics, Sprite, Texture } from "pixi.js";
+import { Assets, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
 import {
   PLAYER_HITBOX,
   PLAYER_SPEED,
@@ -7,20 +7,19 @@ import type { InputManager } from "../../input/InputManager";
 
 export const PLAYER_VIEWPORT_HEIGHT_RATIO = 0.4;
 
-const PLAYER_VISUAL_WIDTH = 439;
-const PLAYER_VISUAL_HEIGHT = 734;
+const PLAYER_VISUAL_WIDTH = 64;
+const PLAYER_VISUAL_HEIGHT = 64;
 const PLAYER_JUMP_GRAVITY = 2400;
 const PLAYER_JUMP_APEX_RATIO = 0.5;
 const PLAYER_GROUND_EPSILON = 0.5;
 const PLAYER_AIR_CONTROL_MULTIPLIER = 1;
 const FOOTSTEPS_LOOP_SRC = "/game-assets/sound/footsteps.wav";
 
-// Temporary walk-cycle stand-in until real Walk sprite frames replace the static art.
-// Purely visual: only offsets `character` inside `visualRoot`, never touches
-// this.x / this.y (world position) or the collision/interaction/sort anchors.
-const WALK_BOB_AMPLITUDE = 14;
-const WALK_BOB_FREQUENCY = 11;
-const WALK_BOB_RECOVERY_SPEED = 14;
+// walk_right_13frames.png is a 4x4 grid of 64x64 cells (13 used, 3 empty).
+// Frame 0 (top-left) is the idle pose; frames 1-12 are the walk-right cycle.
+const PLAYER_SHEET_COLUMNS = 4;
+const PLAYER_SHEET_FRAME_COUNT = 13;
+const PLAYER_WALK_FRAME_DURATION = 0.09;
 
 type PlayerDirection = "left" | "right";
 
@@ -34,6 +33,9 @@ type Bounds = {
 export class Player extends Container {
   private readonly visualRoot = new Container();
   private readonly character: Container;
+  private readonly characterSprite: Sprite | null;
+  private readonly idleTexture: Texture | null;
+  private readonly walkTextures: Texture[];
   private visualScale = 1;
 
   private direction: PlayerDirection = "right";
@@ -41,13 +43,30 @@ export class Player extends Container {
   private verticalVelocity = 0;
   private inputEnabled = true;
   private footstepsAudio: HTMLAudioElement | null = null;
-  private walkCyclePhase = 0;
-  private walkBobOffset = 0;
+  private walkFrameIndex = 0;
+  private walkFrameTimer = 0;
 
-  private constructor(texture: Texture | null) {
+  private constructor(sheetTexture: Texture | null) {
     super();
 
-    this.character = this.createCharacter(texture);
+    if (sheetTexture) {
+      const { idle, walk } = this.sliceWalkSheet(sheetTexture);
+
+      this.idleTexture = idle;
+      this.walkTextures = walk;
+
+      const sprite = new Sprite(idle);
+      sprite.anchor.set(0.5, 1);
+
+      this.character = sprite;
+      this.characterSprite = sprite;
+    } else {
+      this.idleTexture = null;
+      this.walkTextures = [];
+      this.character = this.createFallbackCharacter();
+      this.characterSprite = null;
+    }
+
     this.visualRoot.addChild(this.character);
     this.addChild(this.visualRoot);
   }
@@ -72,16 +91,27 @@ export class Player extends Container {
     }
   }
 
-  private createCharacter(texture: Texture | null): Container {
-    if (!texture) {
-      return this.createFallbackCharacter();
+  private sliceWalkSheet(sheetTexture: Texture) {
+    const frames: Texture[] = [];
+
+    for (let index = 0; index < PLAYER_SHEET_FRAME_COUNT; index += 1) {
+      const column = index % PLAYER_SHEET_COLUMNS;
+      const row = Math.floor(index / PLAYER_SHEET_COLUMNS);
+
+      frames.push(
+        new Texture({
+          source: sheetTexture.source,
+          frame: new Rectangle(
+            column * PLAYER_VISUAL_WIDTH,
+            row * PLAYER_VISUAL_HEIGHT,
+            PLAYER_VISUAL_WIDTH,
+            PLAYER_VISUAL_HEIGHT,
+          ),
+        }),
+      );
     }
 
-    const character = new Sprite(texture);
-
-    character.anchor.set(0.5, 1);
-
-    return character;
+    return { idle: frames[0], walk: frames.slice(1) };
   }
 
   private createFallbackCharacter() {
@@ -92,7 +122,7 @@ export class Player extends Container {
       -PLAYER_VISUAL_HEIGHT,
       PLAYER_VISUAL_WIDTH,
       PLAYER_VISUAL_HEIGHT,
-      24,
+      10,
     );
     character.fill("#f2c4c4");
 
@@ -124,7 +154,7 @@ export class Player extends Container {
       this.y = groundY;
       this.verticalVelocity = 0;
       this.stopFootsteps();
-      this.resetWalkBob();
+      this.stopWalkAnimation();
       return false;
     }
 
@@ -166,28 +196,39 @@ export class Player extends Container {
       this.stopFootsteps();
     }
 
-    this.updateWalkBob(deltaSeconds, didMoveHorizontally && this.isGrounded());
+    this.updateWalkAnimation(deltaSeconds, didMoveHorizontally && this.isGrounded());
 
     return didMoveHorizontally;
   }
 
-  private updateWalkBob(deltaSeconds: number, isWalking: boolean) {
-    if (isWalking) {
-      this.walkCyclePhase += deltaSeconds * WALK_BOB_FREQUENCY;
-      this.walkBobOffset = Math.abs(Math.sin(this.walkCyclePhase)) * WALK_BOB_AMPLITUDE;
-    } else {
-      this.walkCyclePhase = 0;
-      const recovery = Math.min(1, deltaSeconds * WALK_BOB_RECOVERY_SPEED);
-      this.walkBobOffset += (0 - this.walkBobOffset) * recovery;
+  private updateWalkAnimation(deltaSeconds: number, isWalking: boolean) {
+    if (!this.characterSprite || this.walkTextures.length === 0) {
+      return;
     }
 
-    this.character.y = -this.walkBobOffset;
+    if (!isWalking) {
+      this.stopWalkAnimation();
+      return;
+    }
+
+    this.walkFrameTimer += deltaSeconds;
+
+    while (this.walkFrameTimer >= PLAYER_WALK_FRAME_DURATION) {
+      this.walkFrameTimer -= PLAYER_WALK_FRAME_DURATION;
+      this.walkFrameIndex = (this.walkFrameIndex + 1) % this.walkTextures.length;
+    }
+
+    this.characterSprite.texture = this.walkTextures[this.walkFrameIndex];
   }
 
-  private resetWalkBob() {
-    this.walkCyclePhase = 0;
-    this.walkBobOffset = 0;
-    this.character.y = 0;
+  private stopWalkAnimation() {
+    if (!this.characterSprite || !this.idleTexture) {
+      return;
+    }
+
+    this.walkFrameIndex = 0;
+    this.walkFrameTimer = 0;
+    this.characterSprite.texture = this.idleTexture;
   }
 
   private setDirection(direction: PlayerDirection) {

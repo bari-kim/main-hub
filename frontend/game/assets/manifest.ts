@@ -61,7 +61,7 @@ export const assetsManifest: AssetsManifest = {
       assets: [
         {
           alias: "playerWalkRight",
-          src: "/game-assets/characters/player/walk_right_temp.png",
+          src: "/game-assets/characters/player/walk_right_13frames.png",
         },
       ],
     },
